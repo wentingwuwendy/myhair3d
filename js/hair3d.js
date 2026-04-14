@@ -47,12 +47,24 @@ const params = {
 //  THREE.JS SETUP
 // ═══════════════════════════════════════════════════════════════
 const canvas = document.getElementById('three-canvas');
-const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
-renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-renderer.shadowMap.enabled = true;
-renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 1.2;
+let renderer;
+try {
+  renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true, powerPreference: 'high-performance' });
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  renderer.shadowMap.enabled = true;
+  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  renderer.toneMapping = THREE.ACESFilmicToneMapping;
+  renderer.toneMappingExposure = 1.2;
+} catch(e) {
+  document.getElementById('loading-overlay').innerHTML =
+    '<div style="text-align:center;padding:32px">' +
+    '<p style="color:#EC4899;font-size:18px;margin-bottom:12px">⚠️ WebGL 不可用</p>' +
+    '<p style="color:#aaa;font-size:13px;line-height:1.8">请确认：<br>' +
+    '① 使用 Chrome 或 Edge 最新版<br>' +
+    '② 浏览器地址栏输入 <b>chrome://flags</b>，搜索 WebGL，确保已启用<br>' +
+    '③ 更新显卡驱动</p></div>';
+  throw e;
+}
 
 const scene = new THREE.Scene();
 scene.fog = new THREE.Fog(0x0d0d1a, 6, 14);
@@ -84,6 +96,14 @@ scene.add(fillLight);
 const rimLight = new THREE.DirectionalLight(0xc084fc, 0.9);
 rimLight.position.set(0, 2, -2.5);
 scene.add(rimLight);
+
+// ── Check WebGL support ───────────────────────────────────────
+if (!renderer.capabilities || !renderer.getContext()) {
+  document.getElementById('loading-overlay').innerHTML =
+    '<p style="color:#EC4899;font-size:16px;text-align:center;padding:24px">' +
+    '⚠️ 你的浏览器不支持 WebGL<br><br>' +
+    '请使用 Chrome / Edge 最新版，<br>并确保显卡驱动正常。</p>';
+}
 
 // ── Environment sphere (subtle) ───────────────────────────────
 const envGeo = new THREE.SphereGeometry(8, 16, 8);
@@ -476,7 +496,17 @@ buildPresetGrid();
 bindDownload();
 
 // Build initial hair & hide loading overlay
-rebuildHair();
+try {
+  rebuildHair();
+} catch(e) {
+  console.error('Hair build error:', e);
+  document.getElementById('loading-overlay').innerHTML =
+    `<p style="color:#EC4899;font-size:14px;text-align:center;padding:24px">⚠️ 初始化出错<br><br><code style="font-size:11px;color:#aaa">${e.message}</code><br><br>请刷新重试，或换 Chrome 浏览器</p>`;
+}
 document.getElementById('loading-overlay').style.display = 'none';
 
-animate();
+try {
+  animate();
+} catch(e) {
+  console.error('Animate error:', e);
+}
